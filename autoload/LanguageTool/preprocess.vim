@@ -32,6 +32,18 @@ endfunction
 function! LanguageTool#preprocess#applyRules(line) "{{{1
     if exists('b:languagetool_preprocess_rules')
         for [l:rule, l:output] in b:languagetool_preprocess_rules
+            let l:fts = ['tex']
+            if (executable('detex') && index(l:fts, &filetype) == -1)
+              let l:tex_environs = 'figure,wrapfigure,equation,align'
+              if g:tex_flavor == 'latex'
+                let l:detex_cmd = 'detex -nlc ' . l:tmpfilename . ' > ' . l:tmpdetex
+              else
+                let l:detex_cmd = 'detex -nc ' . l:tmpfilename . ' > ' . l:tmpdetex
+              endif
+
+              let a:line = system(l:detex_cmd, a:line)
+            endif
+
             let l:matches = matchlist(a:line, l:rule)
             if !empty(l:matches)
                 return LanguageTool#preprocess#getOutput(l:matches, l:output) . ',{"text":"\n"}'
@@ -45,7 +57,7 @@ endfunction
 " The syntax for rules is pretty simple, for a given rule, the output is
 " computed by replacing all {{\d+}} groups in a:output by the corresponding group in a:matches
 function! LanguageTool#preprocess#getOutput(matches, output) "{{{1
-    return substitute(a:output, '{{\(\d\+\)}}', 
+    return substitute(a:output, '{{\(\d\+\)}}',
                 \ '\=escape(a:matches[str2nr(submatch(1))], "\"\\\t")', 'g')
 endfunction
 
